@@ -161,7 +161,7 @@ contract against `Materials/resume-canonical.json`:
 ## Bootstrap variant (used by /setup)
 
 When the user has no existing Reactive Resume account content, `/setup` copies
-`.claude/skills/job-application-kit/assets/canonical-default.json` to
+`.claude/skills/rx-job-application-kit/assets/canonical-default.json` to
 `Materials/resume-canonical.json` and fills it FROM `Positioning/Master-CV.md`:
 `basics.*` values, `summary.content`, and items for experience, education,
 skills, languages, certifications, volunteer, interests, and profiles. Every

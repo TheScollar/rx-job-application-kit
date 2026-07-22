@@ -11,5 +11,5 @@ every run.
 | `Accomplishments.md` | Reusable STAR-style bullets tagged by theme | `/apply` bullet selection per JD |
 
 Blank templates live in
-`.claude/skills/job-application-kit/references/positioning-templates.md`.
+`.claude/skills/rx-job-application-kit/references/positioning-templates.md`.
 A filled example is in `examples/alex-sample/Positioning/`.

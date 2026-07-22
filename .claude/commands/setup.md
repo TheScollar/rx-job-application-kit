@@ -8,7 +8,7 @@ allowed-tools: [Read, Write, Edit, Glob, Bash, AskUserQuestion]
 
 Builds everything `/apply` depends on. Re-runnable: at each step, if the
 artifact already exists, say so and ask skip / update / rebuild before
-touching it. Detailed rules live in the `job-application-kit` skill
+touching it. Detailed rules live in the `rx-job-application-kit` skill
 references; read them when a step points there.
 
 ## Step 0 - Welcome and privacy check
@@ -77,7 +77,7 @@ a fresh one?
   `resume-get --id <id> --out Materials/resume-canonical.json` (add
   `--force` only if the user confirmed overwriting an existing file).
 - **Bootstrap:** copy
-  `.claude/skills/job-application-kit/assets/canonical-default.json` to
+  `.claude/skills/rx-job-application-kit/assets/canonical-default.json` to
   `Materials/resume-canonical.json`, then fill it from Master-CV per the
   bootstrap variant in `references/resume-json-contract.md` (fresh UUIDs for
   every item; `picture.url` stays empty, the photo is uploaded later in the

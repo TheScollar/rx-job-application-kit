@@ -1,5 +1,5 @@
 ---
-name: job-application-kit
+name: rx-job-application-kit
 description: 'End-to-end job application workflow: one-time setup from your CVs (/setup), per-JD tailoring and publishing to Reactive Resume (/apply), and pipeline status (/pipeline). Use when the user runs one of those commands, pastes a job description or JD URL, or asks to prepare, tailor, track, or evaluate a job application.'
 ---
 

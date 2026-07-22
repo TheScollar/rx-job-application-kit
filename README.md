@@ -1,4 +1,4 @@
-# job-application-kit
+# rx-job-application-kit
 
 A [Claude Code](https://claude.com/claude-code) workspace that turns a job
 description into a decision, a tailored CV, a private resume on

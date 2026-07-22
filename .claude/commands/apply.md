@@ -9,7 +9,7 @@ allowed-tools: [Read, Write, Edit, Glob, Bash, WebFetch, AskUserQuestion, mcp__n
 
 Two mandatory gates: one at pre-screen, one before writing files and creating
 a private remote resume. Everything else runs automatically. Detailed rules
-live in the `job-application-kit` skill references; this command tells you
+live in the `rx-job-application-kit` skill references; this command tells you
 when to read which.
 
 Requires a completed `/setup` (`Positioning/` filled,

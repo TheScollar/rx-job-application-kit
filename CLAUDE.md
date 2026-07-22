@@ -1,4 +1,4 @@
-# job-application-kit
+# rx-job-application-kit
 
 A Claude Code workspace for preparing and tracking job applications with
 Reactive Resume (rxresu.me). Act as a careful assistant on personal career
@@ -9,7 +9,7 @@ data: precise, no invented facts, no leaked secrets.
 ```
 .claude/
 ├── commands/            # thin flows: setup.md, apply.md, pipeline.md
-├── skills/job-application-kit/
+├── skills/rx-job-application-kit/
 │   ├── SKILL.md         # routing table + invariants (read this first)
 │   ├── references/      # the actual rules (JSON contract, HTML, German,
 │   │                    #   note templates, interview banks, API recipes)
@@ -29,7 +29,7 @@ kit.config.json          # language_default, languages, currency
 
 1. **Never Read, cat, echo, grep-display, or print `.env`** or any API key.
    The only permitted check is the awk readiness snippet in
-   `.claude/skills/job-application-kit/references/api-scripts.md`.
+   `.claude/skills/rx-job-application-kit/references/api-scripts.md`.
 2. **All Reactive Resume API access goes through the two scripts** in
    `scripts/`. No curl, no ad-hoc HTTP code.
 3. **No remote deletes, ever.** Never overwrite existing remote resumes;
