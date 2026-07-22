@@ -1,0 +1,14 @@
+# Secrets: the API key lives in .env and must never be committed.
+.env
+.env.*
+!.env.example
+
+# Raw personal documents dropped into the intake zone stay local.
+Materials/intake/*
+!Materials/intake/README.md
+
+# Local machine noise
+.claude/settings.local.json
+.DS_Store
+__pycache__/
+*.pyc

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ],
+    "allow": [
+      "Bash(python3 scripts/reactive_resume_publish.py:*)",
+      "Bash(python3 scripts/reactive_resume_api.py:*)"
+    ]
+  }
+}
