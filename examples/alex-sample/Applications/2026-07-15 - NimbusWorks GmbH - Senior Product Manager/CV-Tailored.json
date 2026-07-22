@@ -1,0 +1,397 @@
+{
+  "picture": {
+    "hidden": false,
+    "url": "",
+    "size": 125,
+    "rotation": 0,
+    "aspectRatio": 1,
+    "borderRadius": 0,
+    "borderColor": "rgba(0, 0, 0, 0.5)",
+    "borderWidth": 0,
+    "shadowColor": "rgba(0, 0, 0, 0.5)",
+    "shadowWidth": 0
+  },
+  "basics": {
+    "name": "Alex Sample",
+    "headline": "Senior Product Manager - Analytics Platforms",
+    "email": "alex.sample@example.com",
+    "phone": "+49 555 0100",
+    "location": "Berlin, Germany",
+    "website": {
+      "url": "https://www.linkedin.com/in/alex-sample-demo",
+      "label": "LinkedIn"
+    },
+    "customFields": []
+  },
+  "summary": {
+    "title": "Profile",
+    "icon": "",
+    "columns": 1,
+    "hidden": false,
+    "keepTogether": false,
+    "startOnNewPage": false,
+    "content": "<p><span>Product manager with 9 years in B2B SaaS analytics and data platforms. Currently owning Acme Analytics' self-serve platform (ingestion, modeling, dashboard embedding) for 800+ B2B customers: <strong>+40% weekly active dashboard users</strong> in two quarters and a usage-based pricing launch that reached <strong>20% of API revenue</strong> in a year. Looking to own an embedded-analytics platform end to end, from semantic layer to packaging.</span></p>"
+  },
+  "sections": {
+    "profiles": {
+      "title": "Online Profiles",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": []
+    },
+    "experience": {
+      "title": "Experience",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "hidden": false,
+          "company": "Acme Analytics GmbH",
+          "position": "",
+          "location": "Berlin, hybrid",
+          "period": "",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": "",
+          "roles": [
+            {
+              "id": "00000000-0000-4000-8000-000000000102",
+              "position": "Senior Product Manager, Data Platform",
+              "period": "Mar 2024 - present",
+              "description": "<ul><li><p><span>Grew weekly active dashboard users by <strong>40% in two quarters</strong> (Q3-Q4 2024) through guided setup and a template gallery</span></p></li><li><p><span>Launched <strong>usage-based pricing</strong> for the embedding API; new plans reached <strong>20% of API revenue</strong> within a year</span></p></li><li><p><span>Run the platform pod (5 engineers, 1 designer, 1 analyst); mentor 1 junior PM</span></p></li></ul>"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000103",
+              "position": "Product Manager, Dashboards",
+              "period": "Jun 2022 - Feb 2024",
+              "description": "<ul><li><p><span>Cut analytics-module churn by <strong>15% over 12 months</strong> via an onboarding redesign validated in 6 A/B tests</span></p></li><li><p><span>Shipped the shared-dashboard permission model, unblocking the two largest enterprise deals of 2023</span></p></li></ul>"
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "hidden": false,
+          "company": "Globex Digital GmbH",
+          "position": "Product Manager",
+          "location": "Berlin",
+          "period": "Aug 2019 - May 2022",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": "<p><span>Product owner for checkout and payments across 3 markets.</span></p><p></p><ul><li><p><span>Consolidated <strong>3 legacy reporting tools</strong> into one internal analytics suite used by 120 internal users</span></p></li><li><p><span>Raised checkout conversion by 8% over 2021 via a 14-experiment program</span></p></li></ul>",
+          "roles": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000105",
+          "hidden": false,
+          "company": "Initech Solutions AG",
+          "position": "Junior Product Manager / Business Analyst",
+          "location": "Hamburg",
+          "period": "Sep 2016 - Jul 2019",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": "<ul><li><p><span>Built the team's first KPI framework with Finance; adopted by 4 product teams</span></p></li></ul>",
+          "roles": []
+        }
+      ]
+    },
+    "education": {
+      "title": "Education",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000120",
+          "hidden": false,
+          "school": "Beispiel University of Applied Sciences",
+          "degree": "B.Sc.",
+          "area": "Business Informatics",
+          "grade": "1.7",
+          "location": "Berlin",
+          "period": "2013 - 2016",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": ""
+        }
+      ]
+    },
+    "projects": {
+      "title": "Projects",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": []
+    },
+    "skills": {
+      "title": "Skills",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000110",
+          "hidden": false,
+          "icon": "acorn",
+          "iconColor": "",
+          "name": "Data",
+          "proficiency": "SQL (advanced), analytics instrumentation, dashboard/BI products, API products",
+          "level": 5,
+          "keywords": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000111",
+          "hidden": false,
+          "icon": "acorn",
+          "iconColor": "",
+          "name": "Product",
+          "proficiency": "Discovery, roadmapping, pricing, experimentation, platform product management",
+          "level": 5,
+          "keywords": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000112",
+          "hidden": false,
+          "icon": "acorn",
+          "iconColor": "",
+          "name": "Leadership",
+          "proficiency": "Pod leadership (7 people), stakeholder management, mentoring",
+          "level": 4,
+          "keywords": []
+        }
+      ]
+    },
+    "languages": {
+      "title": "Languages",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000130",
+          "hidden": false,
+          "language": "German",
+          "fluency": "Native",
+          "level": 5
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000131",
+          "hidden": false,
+          "language": "English",
+          "fluency": "C1",
+          "level": 4
+        }
+      ]
+    },
+    "interests": {
+      "title": "Interests",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000160",
+          "hidden": false,
+          "icon": "",
+          "iconColor": "",
+          "name": "Data visualization",
+          "keywords": []
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000161",
+          "hidden": false,
+          "icon": "",
+          "iconColor": "",
+          "name": "Bouldering",
+          "keywords": []
+        }
+      ]
+    },
+    "awards": {
+      "title": "Awards",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": []
+    },
+    "certifications": {
+      "title": "Continuing Education & Certifications",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000140",
+          "hidden": false,
+          "title": "Data-Informed Product Decisions",
+          "issuer": "Online course",
+          "date": "2023",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": ""
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000141",
+          "hidden": false,
+          "title": "Certified Scrum Product Owner (CSPO)",
+          "issuer": "Scrum Alliance",
+          "date": "2018",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": ""
+        }
+      ]
+    },
+    "publications": {
+      "title": "Publications",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": []
+    },
+    "volunteer": {
+      "title": "Volunteering",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000150",
+          "hidden": false,
+          "organization": "Product Buddies Berlin e.V. (fictional)",
+          "location": "Berlin",
+          "period": "2023 - present",
+          "website": {
+            "url": "",
+            "label": "",
+            "inlineLink": false
+          },
+          "description": "<p><span>Mentoring career changers into product roles.</span></p>"
+        }
+      ]
+    },
+    "references": {
+      "title": "References",
+      "icon": "",
+      "columns": 1,
+      "hidden": false,
+      "keepTogether": false,
+      "startOnNewPage": false,
+      "items": []
+    }
+  },
+  "customSections": [],
+  "metadata": {
+    "template": "ditgar",
+    "layout": {
+      "sidebarWidth": 29,
+      "pages": [
+        {
+          "fullWidth": false,
+          "main": [
+            "profiles",
+            "summary",
+            "education",
+            "experience",
+            "projects",
+            "references",
+            "awards",
+            "volunteer",
+            "publications"
+          ],
+          "sidebar": [
+            "skills",
+            "languages",
+            "certifications",
+            "interests"
+          ]
+        }
+      ]
+    },
+    "page": {
+      "gapX": 4,
+      "gapY": 6,
+      "marginX": 14,
+      "marginY": 12,
+      "format": "a4",
+      "locale": "en-US",
+      "hideLinkUnderline": false,
+      "hideIcons": false,
+      "hideSectionIcons": true
+    },
+    "design": {
+      "level": {
+        "icon": "star",
+        "type": "circle"
+      },
+      "colors": {
+        "primary": "rgba(69, 85, 108, 1)",
+        "text": "rgba(0, 0, 0, 1)",
+        "background": "rgba(255, 255, 255, 1)"
+      }
+    },
+    "typography": {
+      "body": {
+        "fontFamily": "IBM Plex Serif",
+        "fontWeights": [
+          "400",
+          "500"
+        ],
+        "fontSize": 9,
+        "lineHeight": 1.5
+      },
+      "heading": {
+        "fontFamily": "IBM Plex Serif",
+        "fontWeights": [
+          "600"
+        ],
+        "fontSize": 14,
+        "lineHeight": 1.5
+      }
+    },
+    "notes": "",
+    "styleRules": []
+  }
+}
