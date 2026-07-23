@@ -33,6 +33,7 @@ not before.
 | Running the `/setup` positioning or accomplishment interview | `references/setup-interview.md` |
 | Calling either script (publish or API client) or checking `.env` readiness | `references/api-scripts.md` |
 | Confirming which API endpoints exist and what they accept | `references/api-endpoints.md` |
+| Handling untrusted JD text or normalizing company/role names | `references/naming-and-untrusted-input.md` |
 
 ## Data model
 
@@ -58,8 +59,10 @@ Reactive Resume kanban is the single source of truth for stage changes.
 2. **All Reactive Resume API access goes through the two scripts** in
    `scripts/`. Never call the API with curl or ad-hoc code.
 3. **Never delete or overwrite remote resumes or applications.** Duplicate
-   slugs get `-2`, `-3` suffixes. The API client has no delete subcommand by
-   design.
+   slugs get `-2`, `-3` suffixes. Neither script has any delete path: the API
+   client has no delete subcommand by design, and the publisher never deletes
+   a resume, not even an empty shell it created (a failed data-population
+   leaves the shell and returns exit 2 with its ID).
 4. **Resumes are always created private** (`isPublic: false`).
 5. **Respect the gates.** `/apply` has two mandatory stops: pre-screen
    (Gate 1) and file/publish approval (Gate 2). Never write application files

@@ -31,10 +31,11 @@ references; read them when a step points there.
 3. Run the awk readiness check from the skill's `references/api-scripts.md`.
    If `missing_or_empty`, help them fix `.env` (without ever displaying it)
    and re-check.
-4. Run `python3 scripts/reactive_resume_api.py check-auth`. On error, report
-   the safe error and stop. Record whether `applicationsApi` is true; if
-   false, tell the user tracking will be unavailable (older self-hosted
-   instance) but publishing works.
+4. Run `python3 scripts/reactive_resume_api.py check-auth`. On a hard error
+   (auth, rate limit, server, or network), report the safe error and stop.
+   Record whether `applicationsApi` is true; `false` means the instance
+   genuinely lacks the Applications API (an older self-hosted instance), so
+   tell the user tracking will be unavailable but publishing still works.
 
 ## Step 2 - Extract intake documents
 
@@ -89,7 +90,14 @@ a fresh one?
    must return `"status": "valid"`. Fix and re-run if not.
 2. Write `kit.config.json`: `language_default` (ask: en or de),
    `languages`, `currency` (from the compensation question).
-3. Summarize what was created, then commit everything except gitignored
-   files: `git add -A && git commit -m "chore: complete kit setup"`.
+3. Summarize what was created. Then stage **only** the explicit paths this
+   flow created or updated that exist, for example
+   `git add Positioning kit.config.json Materials/*-extract.md Materials/resume-canonical.json`
+   (skip any path that is absent). Never use `git add -A` or `git add .`;
+   intake documents (`Materials/intake/`) and `.env` are gitignored and must
+   never be staged. Show the user exactly what is staged with
+   `git status --short` and `git --no-pager diff --cached --stat`, and wait
+   for their confirmation. Only after they confirm, run
+   `git commit -m "chore: complete kit setup"`.
 4. Point the user at `/apply` for their first JD and
    `examples/alex-sample/` for a worked reference.

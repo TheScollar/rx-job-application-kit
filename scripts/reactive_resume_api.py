@@ -13,14 +13,16 @@ resumes or applications.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
+import os
 import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +138,77 @@ def parse_env_file(path: Path) -> dict[str, str]:
     return values
 
 
+TRUTHY_OVERRIDE_VALUES = {"1", "true", "yes", "on"}
+
+
+def overrides_allowed(environ: Mapping[str, str]) -> bool:
+    """Whether the insecure --base-url/--env-file overrides are permitted."""
+    return (
+        environ.get("REACTIVE_RESUME_ALLOW_OVERRIDES", "").strip().lower()
+        in TRUTHY_OVERRIDE_VALUES
+    )
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    if not host:
+        return False
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def resolve_base_url(
+    cli_base_url: str, env_base_url: str, *, allow_overrides: bool
+) -> str:
+    """Resolve and security-check the API base URL.
+
+    The --base-url override is refused unless overrides are explicitly allowed.
+    The resolved URL must use https, except http is accepted for loopback hosts
+    (or for any host when overrides are allowed).
+    """
+    if cli_base_url and not allow_overrides:
+        raise KitError(
+            "--base-url is disabled by default; set "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1 to use it."
+        )
+    base_url = (cli_base_url or env_base_url or DEFAULT_BASE_URL).strip()
+    parsed = urllib.parse.urlparse(base_url)
+    if parsed.scheme not in ("http", "https"):
+        raise KitError("The API base URL must start with http:// or https://.")
+    if (
+        parsed.scheme == "http"
+        and not _is_loopback_host(parsed.hostname)
+        and not allow_overrides
+    ):
+        raise KitError(
+            "Refusing to send the API key over http:// to a non-loopback host. "
+            "Use https://, or set REACTIVE_RESUME_ALLOW_OVERRIDES=1 to override."
+        )
+    return base_url
+
+
+def resolve_env_file(
+    cli_env_file: Path | None,
+    default_env_file: Path,
+    *,
+    allow_overrides: bool,
+) -> Path:
+    """Resolve the credential file path, gating the --env-file override."""
+    if (
+        cli_env_file is not None
+        and cli_env_file != default_env_file
+        and not allow_overrides
+    ):
+        raise KitError(
+            "--env-file is disabled by default; set "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1 to use it."
+        )
+    return cli_env_file if cli_env_file is not None else default_env_file
+
+
 class ReactiveResumeClient:
     def __init__(self, base_url: str, api_key: str, timeout: int) -> None:
         self.base_url = base_url.rstrip("/")
@@ -226,6 +299,28 @@ def application_summary(item: dict[str, Any]) -> dict[str, Any]:
     return {key: item.get(key) for key in APPLICATION_SUMMARY_FIELDS if key in item}
 
 
+def _find_matching_applications(
+    client: ReactiveResumeClient, company: str, role: str
+) -> list[str]:
+    """Best-effort IDs of existing applications matching company and role."""
+    try:
+        response = client.request("GET", EP_APPLICATIONS)
+    except ApiError:
+        return []
+    if not isinstance(response, list):
+        return []
+    matches = []
+    for item in response:
+        if (
+            isinstance(item, dict)
+            and item.get("company") == company
+            and item.get("role") == role
+            and isinstance(item.get("id"), str)
+        ):
+            matches.append(item["id"])
+    return matches
+
+
 def read_job_description(path: Path) -> tuple[str, list[str]]:
     if not path.is_file():
         raise KitError(f"Job description file not found: {path}")
@@ -267,10 +362,13 @@ def cmd_check_auth(client: ReactiveResumeClient, args: argparse.Namespace) -> tu
                 "Applications API as unavailable."
             )
     except ApiError as error:
-        warnings.append(
-            "Applications API unavailable (this instance is likely older than "
-            f"v5): {error.message}"
-        )
+        if error.status_code in (404, 405):
+            warnings.append(
+                "Applications API not present on this instance (older than v5); "
+                "tracking is unavailable but publishing works."
+            )
+        else:
+            raise
 
     return (
         {
@@ -378,7 +476,35 @@ def cmd_app_create(client: ReactiveResumeClient, args: argparse.Namespace) -> tu
     if tags:
         payload["tags"] = tags
 
-    response = client.request("POST", EP_APPLICATIONS, payload)
+    try:
+        response = client.request("POST", EP_APPLICATIONS, payload)
+    except ApiError as error:
+        if error.status_code is None:
+            # The POST may have created the application despite the dropped
+            # connection. Reporting exit 1 here would invite a duplicate retry,
+            # so surface an ambiguous result plus any likely match instead.
+            return (
+                {
+                    "status": "created_verification_incomplete",
+                    "company": company,
+                    "role": role,
+                    "applicationStatus": payload["status"],
+                    "resumeId": payload.get("resumeId"),
+                    "verified": False,
+                    "possibleMatches": _find_matching_applications(
+                        client, company, role
+                    ),
+                    "warnings": warnings
+                    + [
+                        "Application create outcome is unknown after a transport "
+                        "failure (" + error.message + "). A matching application "
+                        "may already exist; check the Applications kanban before "
+                        "retrying to avoid duplicates."
+                    ],
+                },
+                2,
+            )
+        raise
     if isinstance(response, str) and response:
         application_id = response
     elif isinstance(response, dict) and isinstance(response.get("id"), str):
@@ -538,15 +664,19 @@ def add_common_arguments(parser: argparse.ArgumentParser, repo_root: Path) -> No
     parser.add_argument(
         "--env-file",
         type=Path,
-        default=repo_root / ".env",
-        help="Credential file (default: .env in the repo root).",
+        default=None,
+        help=(
+            "Credential file (default: .env in the repo root). Disabled "
+            "unless REACTIVE_RESUME_ALLOW_OVERRIDES=1."
+        ),
     )
     parser.add_argument(
         "--base-url",
         default="",
         help=(
-            "Testing override; otherwise uses REACTIVE_RESUME_BASE_URL "
-            "or the cloud API."
+            "Base URL override, disabled unless "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1; otherwise uses "
+            "REACTIVE_RESUME_BASE_URL from .env or the cloud API."
         ),
     )
     parser.add_argument(
@@ -674,22 +804,23 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        env = parse_env_file(args.env_file)
+        allow_overrides = overrides_allowed(os.environ)
+        repo_root = Path(__file__).resolve().parent.parent
+        env_file = resolve_env_file(
+            args.env_file, repo_root / ".env", allow_overrides=allow_overrides
+        )
+        env = parse_env_file(env_file)
         api_key = env.get("REACTIVE_RESUME_API_KEY", "").strip()
         if not api_key:
             raise KitError(
-                f"REACTIVE_RESUME_API_KEY is missing from {args.env_file}."
+                f"REACTIVE_RESUME_API_KEY is missing from {env_file}."
             )
 
-        base_url = (
-            args.base_url
-            or env.get("REACTIVE_RESUME_BASE_URL", "").strip()
-            or DEFAULT_BASE_URL
+        base_url = resolve_base_url(
+            args.base_url,
+            env.get("REACTIVE_RESUME_BASE_URL", "").strip(),
+            allow_overrides=allow_overrides,
         )
-        if not base_url.startswith(("http://", "https://")):
-            raise KitError(
-                "REACTIVE_RESUME_BASE_URL must start with http:// or https://."
-            )
         if args.timeout <= 0:
             raise KitError("--timeout must be greater than zero.")
 

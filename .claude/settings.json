@@ -2,7 +2,13 @@
   "permissions": {
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./scripts/**)",
+      "Edit(./scripts/**)"
     ],
     "allow": [
       "Bash(python3 scripts/reactive_resume_publish.py:*)",

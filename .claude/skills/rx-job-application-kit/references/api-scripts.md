@@ -40,8 +40,8 @@ chat.
 | Exit | Meaning | What to do |
 |---|---|---|
 | 0 | Success, verified | Record returned IDs/values, continue |
-| 1 | Error, nothing usable was created (stderr JSON) | Report the safe error, stop, never auto-retry auth/validation failures |
-| 2 | Created/updated but verification incomplete | The remote object EXISTS and must not be deleted or recreated. Report its ID and warnings, stop for user direction |
+| 1 | Definite pre-creation failure; nothing was persisted (stderr JSON) | Report the safe error, stop, never auto-retry auth/validation failures |
+| 2 | A remote object EXISTS but its outcome/verification is incomplete or ambiguous | Never delete or recreate it. This includes a resume shell that was created but whose data population failed: keep the shell. Report its ID/slug and warnings, stop for user direction |
 
 ## Publisher: `scripts/reactive_resume_publish.py`
 
@@ -61,8 +61,9 @@ python3 scripts/reactive_resume_publish.py \
 Success stdout: `{"status": "published", "id": ..., "name": ..., "slug": ...,
 "tags": [...], "isPublic": false, "apiUrl": ..., "verified": true, ...}`.
 On exit 2 (`created_verification_incomplete`) the resume exists; keep it.
-On exit 1 the helper deletes only its own empty shell if populating failed;
-if that cleanup also fails, it reports the orphaned resume ID prominently.
+The publisher never deletes a remote resume. If the shell is created but
+populating its data fails, the publisher leaves the shell in place and
+returns exit 2 with the resume ID and a warning; never delete or recreate it.
 
 ## API client: `scripts/reactive_resume_api.py`
 
@@ -106,5 +107,8 @@ Notes:
   instance), skip all `app-*` calls, warn the user once, and continue;
   publishing still works.
 - There is deliberately NO delete subcommand. Never delete remote objects.
-- `--env-file` and `--base-url` exist on every subcommand for testing;
-  default is `.env` in the repo root and the hosted API.
+- `--env-file` and `--base-url` are disabled by default and take effect only
+  when `REACTIVE_RESUME_ALLOW_OVERRIDES` is set to a truthy value
+  (`1`/`true`/`yes`/`on`). When enabled, a resolved base URL must use
+  `https://`, except for loopback hosts where `http://` is allowed only for
+  `localhost`, `127.0.0.1`, or `::1`.

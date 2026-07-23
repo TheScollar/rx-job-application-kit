@@ -9,7 +9,9 @@ result object to stdout so callers can record the created resume metadata.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -18,7 +20,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 DEFAULT_BASE_URL = "https://rxresu.me/api/openapi"
@@ -252,6 +254,79 @@ def unique_tags(tags: list[str]) -> list[str]:
     return result
 
 
+TRUTHY_OVERRIDE_VALUES = {"1", "true", "yes", "on"}
+
+
+def overrides_allowed(environ: Mapping[str, str]) -> bool:
+    """Whether the insecure --base-url/--env-file overrides are permitted."""
+    return (
+        environ.get("REACTIVE_RESUME_ALLOW_OVERRIDES", "").strip().lower()
+        in TRUTHY_OVERRIDE_VALUES
+    )
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    if not host:
+        return False
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def resolve_base_url(
+    cli_base_url: str, env_base_url: str, *, allow_overrides: bool
+) -> str:
+    """Resolve and security-check the API base URL.
+
+    The --base-url override is refused unless overrides are explicitly allowed.
+    The resolved URL must use https, except http is accepted for loopback hosts
+    (or for any host when overrides are allowed).
+    """
+    if cli_base_url and not allow_overrides:
+        raise PublishError(
+            "--base-url is disabled by default; set "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1 to use it."
+        )
+    base_url = (cli_base_url or env_base_url or DEFAULT_BASE_URL).strip()
+    parsed = urllib.parse.urlparse(base_url)
+    if parsed.scheme not in ("http", "https"):
+        raise PublishError(
+            "The API base URL must start with http:// or https://."
+        )
+    if (
+        parsed.scheme == "http"
+        and not _is_loopback_host(parsed.hostname)
+        and not allow_overrides
+    ):
+        raise PublishError(
+            "Refusing to send the API key over http:// to a non-loopback host. "
+            "Use https://, or set REACTIVE_RESUME_ALLOW_OVERRIDES=1 to override."
+        )
+    return base_url
+
+
+def resolve_env_file(
+    cli_env_file: Path | None,
+    default_env_file: Path,
+    *,
+    allow_overrides: bool,
+) -> Path:
+    """Resolve the credential file path, gating the --env-file override."""
+    if (
+        cli_env_file is not None
+        and cli_env_file != default_env_file
+        and not allow_overrides
+    ):
+        raise PublishError(
+            "--env-file is disabled by default; set "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1 to use it."
+        )
+    return cli_env_file if cli_env_file is not None else default_env_file
+
+
 class ReactiveResumeClient:
     def __init__(self, base_url: str, api_key: str, timeout: int) -> None:
         self.base_url = base_url.rstrip("/")
@@ -357,11 +432,6 @@ class ReactiveResumeClient:
             raise ApiError("Reactive Resume get response was not an object.")
         return response
 
-    def delete_resume(self, resume_id: str) -> None:
-        self.request(
-            "DELETE", f"/resumes/{urllib.parse.quote(resume_id, safe='')}"
-        )
-
 
 def is_duplicate_slug_error(error: ApiError) -> bool:
     body = error.response_body.casefold()
@@ -388,6 +458,43 @@ def candidate_name_and_slug(
     return f"{base_name} ({suffix})", f"{base_slug}-{suffix}"
 
 
+IGNORED_DATA_KEYS = {"id"}
+
+
+def content_mismatches(local: Any, remote: Any, path: str = "data") -> list[str]:
+    """Paths where the remote data does not preserve the authored local data.
+
+    Only fields present locally are checked, so server-added keys are ignored;
+    keys named ``id`` are ignored because the server may reassign them.
+    """
+    mismatches: list[str] = []
+    _compare_subset(local, remote, path, mismatches)
+    return mismatches
+
+
+def _compare_subset(local: Any, remote: Any, path: str, out: list[str]) -> None:
+    if isinstance(local, dict):
+        if not isinstance(remote, dict):
+            out.append(path)
+            return
+        for key, value in local.items():
+            if key in IGNORED_DATA_KEYS:
+                continue
+            if key not in remote:
+                out.append(f"{path}.{key}")
+            else:
+                _compare_subset(value, remote[key], f"{path}.{key}", out)
+    elif isinstance(local, list):
+        if not isinstance(remote, list) or len(remote) != len(local):
+            out.append(path)
+            return
+        for index, (local_item, remote_item) in enumerate(zip(local, remote)):
+            _compare_subset(local_item, remote_item, f"{path}[{index}]", out)
+    else:
+        if local != remote:
+            out.append(path)
+
+
 def verify_resume(
     remote: dict[str, Any],
     *,
@@ -410,21 +517,18 @@ def verify_resume(
     if not isinstance(remote_data, dict):
         return mismatches + ["data"]
 
-    local_headline = local_data.get("basics", {}).get("headline")
-    remote_headline = remote_data.get("basics", {}).get("headline")
-    if remote_headline != local_headline:
-        mismatches.append("data.basics.headline")
-
-    local_items = local_data.get("sections", {}).get("experience", {}).get(
-        "items", []
-    )
-    remote_items = remote_data.get("sections", {}).get("experience", {}).get(
-        "items", []
-    )
-    if not isinstance(remote_items, list) or len(remote_items) != len(local_items):
-        mismatches.append("data.sections.experience.items")
-
+    mismatches.extend(content_mismatches(local_data, remote_data))
     return mismatches
+
+
+def find_resume_id_by_slug(
+    client: ReactiveResumeClient, slug: str
+) -> str | None:
+    """Return the ID of an existing resume with this slug, if any."""
+    for item in client.list_resumes():
+        if item.get("slug") == slug and isinstance(item.get("id"), str):
+            return item["id"]
+    return None
 
 
 def publish_resume(
@@ -452,13 +556,50 @@ def publish_resume(
             resume_id = client.create_resume(selected_name, selected_slug, tags)
             break
         except ApiError as error:
-            if not is_duplicate_slug_error(error):
-                raise
-            existing_slugs.add(selected_slug)
+            if is_duplicate_slug_error(error):
+                existing_slugs.add(selected_slug)
+                continue
+            if error.status_code is None:
+                # The connection dropped mid-request; the server may already
+                # have created the resume. Reconcile by slug instead of blindly
+                # recreating (which would duplicate) or deleting.
+                try:
+                    recovered_id = find_resume_id_by_slug(client, selected_slug)
+                except ApiError:
+                    return PublishResult(
+                        status="created_verification_incomplete",
+                        resume_id="",
+                        name=selected_name,
+                        slug=selected_slug,
+                        tags=tags,
+                        api_url=f"{client.base_url}/resumes",
+                        verified=False,
+                        warnings=[
+                            "Create request failed and the outcome could not be "
+                            f"reconciled; a resume with slug '{selected_slug}' "
+                            "may or may not exist. Check your Reactive Resume "
+                            "account before retrying."
+                        ],
+                    )
+                if recovered_id:
+                    resume_id = recovered_id
+                    break
+                raise PublishError(
+                    "Resume creation failed and no resume with the intended "
+                    "slug exists; nothing was created.",
+                    slug=selected_slug,
+                    create_error=error.message,
+                ) from error
+            raise
     else:
         raise PublishError(
             f"Could not allocate a unique slug after {MAX_SLUG_ATTEMPTS} attempts."
         )
+
+    api_url = (
+        f"{client.base_url}/resumes/"
+        f"{urllib.parse.quote(resume_id, safe='')}"
+    )
 
     try:
         client.update_resume(
@@ -469,49 +610,32 @@ def publish_resume(
             data=resume_data,
         )
     except PublishError as update_error:
-        # A transport or decoding error can happen after the server applied the
-        # PUT. Keep the resume when the outcome is ambiguous to avoid deleting
-        # valid work.
-        if (
+        # The resume shell exists from here on. Never delete it: keep it and
+        # report an ambiguous result so the user decides (retry population or
+        # remove it in the UI). This holds for both transport failures and HTTP
+        # errors returned after the shell was created.
+        transport = (
             isinstance(update_error, ApiError)
             and update_error.status_code is None
-        ):
-            return PublishResult(
-                status="created_verification_incomplete",
-                resume_id=resume_id,
-                name=selected_name,
-                slug=selected_slug,
-                tags=tags,
-                api_url=(
-                    f"{client.base_url}/resumes/"
-                    f"{urllib.parse.quote(resume_id, safe='')}"
-                ),
-                verified=False,
-                warnings=[
-                    "Resume update outcome is inconclusive: " + update_error.message
-                ],
-            )
-        try:
-            client.delete_resume(resume_id)
-        except PublishError as cleanup_error:
-            raise PublishError(
-                "Resume data update failed and the empty remote shell could "
-                "not be deleted.",
-                resume_id=resume_id,
-                slug=selected_slug,
-                update_error=update_error.message,
-                cleanup_error=cleanup_error.message,
-            ) from update_error
-        raise PublishError(
-            "Resume data update failed; the empty remote shell was deleted.",
+        )
+        cause = "transport failure" if transport else "API error"
+        return PublishResult(
+            status="created_verification_incomplete",
+            resume_id=resume_id,
+            name=selected_name,
             slug=selected_slug,
-            update_error=update_error.message,
-        ) from update_error
+            tags=tags,
+            api_url=api_url,
+            verified=False,
+            warnings=[
+                f"Resume data update did not complete ({cause}): "
+                + update_error.message
+                + f" The resume '{selected_slug}' (id {resume_id}) exists as an "
+                "empty or partial shell; retry population or remove it in the "
+                "Reactive Resume UI. This script never deletes remote resumes."
+            ],
+        )
 
-    api_url = (
-        f"{client.base_url}/resumes/"
-        f"{urllib.parse.quote(resume_id, safe='')}"
-    )
     try:
         remote = client.get_resume(resume_id)
         mismatches = verify_resume(
@@ -557,7 +681,6 @@ def publish_resume(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    repo_root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(
         description="Create and verify a private Reactive Resume from JSON."
     )
@@ -574,15 +697,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--env-file",
         type=Path,
-        default=repo_root / ".env",
-        help="Credential file (default: .env in the repo root).",
+        default=None,
+        help=(
+            "Credential file (default: .env in the repo root). Disabled "
+            "unless REACTIVE_RESUME_ALLOW_OVERRIDES=1."
+        ),
     )
     parser.add_argument(
         "--base-url",
         default="",
         help=(
-            "Testing override; otherwise uses REACTIVE_RESUME_BASE_URL "
-            "or the cloud API."
+            "Base URL override, disabled unless "
+            "REACTIVE_RESUME_ALLOW_OVERRIDES=1; otherwise uses "
+            "REACTIVE_RESUME_BASE_URL from .env or the cloud API."
         ),
     )
     parser.add_argument(
@@ -625,22 +752,23 @@ def main() -> int:
             )
             return 0
 
-        env = parse_env_file(args.env_file)
+        allow_overrides = overrides_allowed(os.environ)
+        repo_root = Path(__file__).resolve().parent.parent
+        env_file = resolve_env_file(
+            args.env_file, repo_root / ".env", allow_overrides=allow_overrides
+        )
+        env = parse_env_file(env_file)
         api_key = env.get("REACTIVE_RESUME_API_KEY", "").strip()
         if not api_key:
             raise PublishError(
-                f"REACTIVE_RESUME_API_KEY is missing from {args.env_file}."
+                f"REACTIVE_RESUME_API_KEY is missing from {env_file}."
             )
 
-        base_url = (
-            args.base_url
-            or env.get("REACTIVE_RESUME_BASE_URL", "").strip()
-            or DEFAULT_BASE_URL
+        base_url = resolve_base_url(
+            args.base_url,
+            env.get("REACTIVE_RESUME_BASE_URL", "").strip(),
+            allow_overrides=allow_overrides,
         )
-        if not base_url.startswith(("http://", "https://")):
-            raise PublishError(
-                "REACTIVE_RESUME_BASE_URL must start with http:// or https://."
-            )
         if args.timeout <= 0:
             raise PublishError("--timeout must be greater than zero.")
 

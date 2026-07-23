@@ -32,9 +32,10 @@ kit.config.json          # language_default, languages, currency
    `.claude/skills/rx-job-application-kit/references/api-scripts.md`.
 2. **All Reactive Resume API access goes through the two scripts** in
    `scripts/`. No curl, no ad-hoc HTTP code.
-3. **No remote deletes, ever.** Never overwrite existing remote resumes;
-   duplicate slugs get suffixed. Exit code 2 means the remote object exists:
-   keep it and stop for direction.
+3. **No remote deletes, ever.** Neither script has any delete path. Never
+   overwrite existing remote resumes; duplicate slugs get suffixed. Exit code
+   2 means the remote object exists (including a shell that was created but
+   not fully populated): keep it and stop for direction.
 4. Resumes are always created **private**.
 5. Respect `/apply`'s two gates; never write files or call the API before
    the corresponding gate passes.
