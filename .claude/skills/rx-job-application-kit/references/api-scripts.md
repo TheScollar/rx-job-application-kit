@@ -40,8 +40,8 @@ chat.
 | Exit | Meaning | What to do |
 |---|---|---|
 | 0 | Success, verified | Record returned IDs/values, continue |
-| 1 | Definite pre-creation failure; nothing was persisted (stderr JSON) | Report the safe error, stop, never auto-retry auth/validation failures |
-| 2 | A remote object EXISTS but its outcome/verification is incomplete or ambiguous | Never delete or recreate it. This includes a resume shell that was created but whose data population failed: keep the shell. Report its ID/slug and warnings, stop for user direction |
+| 1 | Definite failure before a remote mutation; nothing was persisted (stderr JSON) | Report the safe error, stop, never auto-retry auth/validation failures |
+| 2 | A remote object EXISTS but its mutation outcome or verification is incomplete or ambiguous | Never delete, recreate, or auto-retry it. This includes a resume shell whose data population failed and an application update whose final state could not be verified. Report its ID/slug and warnings, stop for user direction |
 
 ## Publisher: `scripts/reactive_resume_publish.py`
 
@@ -83,7 +83,7 @@ python3 scripts/reactive_resume_api.py app-create \
   --resume-id "<id from publish result>" \
   --source "<linkedin|headhunter|direct|referral>" \
   --source-url "<JD URL>" --location "<from JD>" \
-  --jd-file "/tmp/jd-<slug>.txt" --tag "job-application"
+  --jd-file "Applications/<folder>/JD.txt" --tag "job-application"
 
 # Pipeline reads (used by /pipeline)
 python3 scripts/reactive_resume_api.py app-list
@@ -103,6 +103,9 @@ Notes:
   `screening`, `interview`, `offer`, `rejected`.
 - `--jd-file` avoids putting long JD text into argv; the script truncates to
   the API's 20,000-character maximum and reports a warning when it does.
+- For `app-update`, an ambiguous transport failure is verified with a fresh
+  read when possible. If the requested values cannot be confirmed, the script
+  exits 2; never auto-retry the update.
 - If `check-auth` reports `"applicationsApi": false` (older self-hosted
   instance), skip all `app-*` calls, warn the user once, and continue;
   publishing still works.

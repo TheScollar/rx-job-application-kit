@@ -28,6 +28,19 @@ def app_create_args(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
+def app_update_args(**overrides) -> SimpleNamespace:
+    base = dict(
+        id="app_1",
+        status="applied",
+        archive=False,
+        unarchive=False,
+        follow_up_at="",
+        follow_up_note="",
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
 class EnvParsingTests(unittest.TestCase):
     def _parse(self, text: str) -> dict:
         with tempfile.TemporaryDirectory() as tmp:
@@ -173,6 +186,66 @@ class AppCreateTests(unittest.TestCase):
             api.cmd_app_create(FakeClient(handler), app_create_args())
 
 
+class AppUpdateTests(unittest.TestCase):
+    def test_put_transport_failure_is_reconciled_when_update_persisted(self):
+        def handler(method, path, payload=None, query=None):
+            if method == "PUT" and path == "/applications/app_1":
+                raise api.ApiError("timed out", status_code=None)
+            if method == "GET" and path == "/applications/app_1":
+                return {"id": "app_1", "status": "applied"}
+            raise AssertionError(f"unexpected {method} {path}")
+
+        client = FakeClient(handler)
+        result, code = api.cmd_app_update(client, app_update_args())
+
+        self.assertEqual(code, 0)
+        self.assertEqual(result["status"], "updated")
+        self.assertTrue(result["verified"])
+        self.assertIn("reconciliation confirmed", result["warnings"][0])
+        self.assertEqual([call[0] for call in client.calls], ["PUT", "GET"])
+
+    def test_put_transport_failure_is_incomplete_when_not_persisted(self):
+        def handler(method, path, payload=None, query=None):
+            if method == "PUT" and path == "/applications/app_1":
+                raise api.ApiError("connection reset", status_code=None)
+            if method == "GET" and path == "/applications/app_1":
+                return {"id": "app_1", "status": "saved"}
+            raise AssertionError(f"unexpected {method} {path}")
+
+        result, code = api.cmd_app_update(FakeClient(handler), app_update_args())
+
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "updated_verification_incomplete")
+        self.assertFalse(result["verified"])
+        self.assertIn("outcome is unknown", result["warnings"][0])
+        self.assertIn("status", result["warnings"][0])
+
+    def test_put_transport_failure_is_incomplete_when_reconciliation_fails(self):
+        def handler(method, path, payload=None, query=None):
+            if method == "PUT" and path == "/applications/app_1":
+                raise api.ApiError("connection reset", status_code=None)
+            if method == "GET" and path == "/applications/app_1":
+                raise api.ApiError("re-read timed out", status_code=None)
+            raise AssertionError(f"unexpected {method} {path}")
+
+        result, code = api.cmd_app_update(FakeClient(handler), app_update_args())
+
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "updated_verification_incomplete")
+        self.assertFalse(result["verified"])
+        self.assertIn("outcome is unknown", result["warnings"][0])
+        self.assertIn("could not re-read", result["warnings"][0])
+
+    def test_put_http_error_is_a_hard_error(self):
+        def handler(method, path, payload=None, query=None):
+            if method == "PUT" and path == "/applications/app_1":
+                raise api.ApiError("bad request", status_code=400)
+            raise AssertionError(f"unexpected {method} {path}")
+
+        with self.assertRaises(api.ApiError):
+            api.cmd_app_update(FakeClient(handler), app_update_args())
+
+
 class OverrideGatingTests(unittest.TestCase):
     def test_overrides_allowed(self):
         self.assertTrue(api.overrides_allowed(
@@ -186,6 +259,20 @@ class OverrideGatingTests(unittest.TestCase):
     def test_resolve_base_url_http_non_loopback_blocked(self):
         with self.assertRaises(api.KitError):
             api.resolve_base_url("", "http://evil.com", allow_overrides=False)
+
+    def test_resolve_base_url_http_non_loopback_blocked_with_override(self):
+        with self.assertRaises(api.KitError):
+            api.resolve_base_url(
+                "http://example.test/api", "", allow_overrides=True
+            )
+
+    def test_resolve_base_url_https_override_allowed(self):
+        self.assertEqual(
+            api.resolve_base_url(
+                "https://example.test/api", "", allow_overrides=True
+            ),
+            "https://example.test/api",
+        )
 
     def test_resolve_base_url_http_loopback_allowed(self):
         self.assertEqual(

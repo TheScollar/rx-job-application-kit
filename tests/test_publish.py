@@ -250,11 +250,18 @@ class OverrideGatingTests(unittest.TestCase):
             self.assertEqual(
                 publish.resolve_base_url("", url, allow_overrides=False), url)
 
-    def test_resolve_base_url_http_non_loopback_allowed_with_override(self):
-        self.assertEqual(
-            publish.resolve_base_url("", "http://192.168.1.9", allow_overrides=True),
-            "http://192.168.1.9",
-        )
+    def test_resolve_base_url_http_non_loopback_blocked_with_override(self):
+        for cli_url, env_url in (
+            ("http://192.168.1.9", ""),
+            ("", "http://192.168.1.9"),
+        ):
+            with self.subTest(cli_url=cli_url, env_url=env_url):
+                with self.assertRaisesRegex(
+                    publish.PublishError, "Use https:// instead"
+                ):
+                    publish.resolve_base_url(
+                        cli_url, env_url, allow_overrides=True
+                    )
 
     def test_resolve_base_url_rejects_non_http_scheme(self):
         with self.assertRaises(publish.PublishError):

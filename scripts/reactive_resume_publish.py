@@ -282,8 +282,7 @@ def resolve_base_url(
     """Resolve and security-check the API base URL.
 
     The --base-url override is refused unless overrides are explicitly allowed.
-    The resolved URL must use https, except http is accepted for loopback hosts
-    (or for any host when overrides are allowed).
+    The resolved URL must use https, except http is accepted for loopback hosts.
     """
     if cli_base_url and not allow_overrides:
         raise PublishError(
@@ -296,14 +295,10 @@ def resolve_base_url(
         raise PublishError(
             "The API base URL must start with http:// or https://."
         )
-    if (
-        parsed.scheme == "http"
-        and not _is_loopback_host(parsed.hostname)
-        and not allow_overrides
-    ):
+    if parsed.scheme == "http" and not _is_loopback_host(parsed.hostname):
         raise PublishError(
             "Refusing to send the API key over http:// to a non-loopback host. "
-            "Use https://, or set REACTIVE_RESUME_ALLOW_OVERRIDES=1 to override."
+            "Use https:// instead."
         )
     return base_url
 

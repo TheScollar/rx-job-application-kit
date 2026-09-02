@@ -1,7 +1,9 @@
 ---
 name: pipeline
 description: 'Read-only pipeline overview: current applications grouped by status plus totals, from the Reactive Resume Applications API.'
-allowed-tools: [Bash]
+allowed-tools:
+  - Bash(python3 scripts/reactive_resume_api.py app-list:*)
+  - Bash(python3 scripts/reactive_resume_api.py app-stats:*)
 ---
 
 # /pipeline - status overview (read-only)
@@ -37,6 +39,5 @@ requested by the user.
    `12 total | saved 3 · applied 4 · screening 2 · interview 2 · offer 0 · rejected 1`
 
 4. Close with: move cards on the kanban at https://rxresu.me; use
-   `/apply` to add a new opportunity. If the user asks for a status change
-   or follow-up reminder, use `app-update` per the skill's
-   `references/api-scripts.md` after confirming the exact change.
+   `/apply` to add a new opportunity. This command cannot make status or
+   follow-up changes; direct the user to the kanban for those updates.

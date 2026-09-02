@@ -166,8 +166,8 @@ def resolve_base_url(
     """Resolve and security-check the API base URL.
 
     The --base-url override is refused unless overrides are explicitly allowed.
-    The resolved URL must use https, except http is accepted for loopback hosts
-    (or for any host when overrides are allowed).
+    The resolved URL must use https, except http is accepted for loopback hosts.
+    Overrides may select a custom host, but never weaken transport security.
     """
     if cli_base_url and not allow_overrides:
         raise KitError(
@@ -178,14 +178,10 @@ def resolve_base_url(
     parsed = urllib.parse.urlparse(base_url)
     if parsed.scheme not in ("http", "https"):
         raise KitError("The API base URL must start with http:// or https://.")
-    if (
-        parsed.scheme == "http"
-        and not _is_loopback_host(parsed.hostname)
-        and not allow_overrides
-    ):
+    if parsed.scheme == "http" and not _is_loopback_host(parsed.hostname):
         raise KitError(
             "Refusing to send the API key over http:// to a non-loopback host. "
-            "Use https://, or set REACTIVE_RESUME_ALLOW_OVERRIDES=1 to override."
+            "Use https:// instead."
         )
     return base_url
 
@@ -621,21 +617,38 @@ def cmd_app_update(client: ReactiveResumeClient, args: argparse.Namespace) -> tu
             "--unarchive, --follow-up-at, --follow-up-note."
         )
 
-    client.request("PUT", application_path(args.id), payload)
-
     result: dict[str, Any] = {
         "status": "updated",
         "id": args.id,
         "changes": payload,
         "verified": False,
     }
+    put_transport_error: ApiError | None = None
+    try:
+        client.request("PUT", application_path(args.id), payload)
+    except ApiError as error:
+        if error.status_code is not None:
+            raise
+        # A transport failure can happen after the server commits the PUT.
+        # Re-read before reporting an error so callers do not retry a mutation
+        # that may already have succeeded.
+        put_transport_error = error
+
     try:
         remote = client.request("GET", application_path(args.id))
     except ApiError as error:
         result["status"] = "updated_verification_incomplete"
-        result["warnings"] = [
-            "Update was sent but could not be re-read: " + error.message
-        ]
+        if put_transport_error is not None:
+            result["warnings"] = [
+                "Application update outcome is unknown after a transport failure "
+                f"({put_transport_error.message}), and reconciliation could not "
+                f"re-read the application ({error.message}). Check the application "
+                "before retrying."
+            ]
+        else:
+            result["warnings"] = [
+                "Update was sent but could not be re-read: " + error.message
+            ]
         return (result, 2)
 
     mismatches = []
@@ -648,10 +661,26 @@ def cmd_app_update(client: ReactiveResumeClient, args: argparse.Namespace) -> tu
 
     if mismatches:
         result["status"] = "updated_verification_incomplete"
-        result["warnings"] = ["Verification mismatch: " + ", ".join(mismatches)]
+        if put_transport_error is not None:
+            result["warnings"] = [
+                "Application update outcome is unknown after a transport failure "
+                f"({put_transport_error.message}); reconciliation did not confirm: "
+                + ", ".join(mismatches)
+                + ". Check the application before retrying."
+            ]
+        else:
+            result["warnings"] = [
+                "Verification mismatch: " + ", ".join(mismatches)
+            ]
         return (result, 2)
 
     result["verified"] = True
+    if put_transport_error is not None:
+        result["warnings"] = [
+            "The update response was lost after a transport failure "
+            f"({put_transport_error.message}), but reconciliation confirmed all "
+            "requested changes."
+        ]
     return (result, 0)
 
 
